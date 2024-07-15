@@ -1,0 +1,616 @@
+---
+title: "League of Legends SoloQ matches at 15 minutes 2024"
+author: "Paweł Niedziela"
+format: 
+  html:
+    embed-resources: true
+    toc: true
+    code-fold: true
+    self-contained: true
+execute: 
+  echo: true
+  warning: true
+  cache: true
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+## Cel badania
+
+Celem badania jest budowa optymalnego modelu klasyfikacyjnego za pomocą wybranych algorytmów uczenia maszynowego. Jego zadaniem będzie zweryfikowanie na podstawie podanych predyktorów która drużyna wygrała mecz.
+
+## Opisz zbioru badawczego
+
+Zbiór danych **League of Legends SoloQ matches at 15 minutes 2024** został pobrany ze strony [Kaggle](https://www.kaggle.com/datasets/karlorusovan/league-of-legends-soloq-matches-at-10-minutes-2024/data).
+
+### Informacje o zbiorze danych[^1]
+
+[^1]: Opis został przetłumaczony za pomocą [DeepL](https://www.deepl.com/translator) ze strony [Kaggle](https://www.kaggle.com/datasets/karlorusovan/league-of-legends-soloq-matches-at-10-minutes-2024/data)
+
+Ten zbiór danych zawiera dane dotyczące pierwszych 15 minut rozgrywki dla ponad 24 tysięcy meczów solo w kolejce z europejskich serwerów (EUNE i EUW). Średnie ELO meczów wynosi od średniego szmaragdu do wysokiego diamentu. Głównym celem zbioru danych jest pomoc w trenowaniu modeli do przewidywania zwycięzcy na podstawie przebiegu pierwszych 15 minut meczu.
+
+Istnieje 14 cech dla czerwonej i 14 cech dla niebieskiej drużyny (cecha blueTeamFirstBlood liczy się dla obu drużyn, ponieważ mówi nam, która drużyna otrzymała pierwsze zabójstwo), a docelową cechą jest blueWin. blueWin == 1 oznacza zwycięstwo niebieskiej drużyny, a blueWin == 0 oznacza, że wygrała drużyna czerwona.
+
+Notatnik szczegółowo opisujący proces zbierania danych jest dostępny w zakładce kod. Mamy nadzieję, że pomoże to komuś ulepszyć metodę zbierania danych lub ponownie wykorzystać kod w innym projekcie.
+
+Nie powinno być żadnych brakujących wartości.
+
+### Objaśnienia zmiennych
+
+-   `matchId` - identyfikator meczu ligowego
+
+-   `blueTeamControlWardsPlaced` - totemy kontrolne/różowe umieszczone przez niebieską drużynę (mogą mieć wartości odstające w oparciu o możliwość, że drużyna podda się i kupi wiele totemów na koniec i umieści je)
+
+-   `blueTeamWardsPlaced` - wszystkie rodzaje totemów (kontrolne, strażniczy, ghost poro itp.) umieszczone przez niebieską drużynę
+
+-   `blueTeamTotalKills` - całkowita liczba zabójstw dokonanych przez niebieską drużynę, zabicie wrogiego bohatera generuje złoto i doświadczenie.
+
+-   `blueTeamDragonKills` - całkowita liczba smoków zabitych przez niebieską drużynę, smoki to elitarne potwory, które po zabiciu dają określone stałe wzmocnienia, a zabicie czwartego smoka daje drużynie smoczą duszę
+
+-   `blueTeamHeraldKills` - całkowita liczba zabitych heraldów przez niebieską drużynę, herald jest elitarnym potworem, który pomaga w niszczeniu budynków wroga (wieżyczek, inhibitorów i nexusa) oraz przepychaniu linii.
+
+-   `blueTeamTowersDestroyed` - łączna liczba wież zniszczonych przez niebieską drużynę, wieże to struktury obronne na alei, które atakują stwory i bohaterów.
+
+-   `blueTeamInhibitorsDestroyed` - całkowita liczba inhibitorów zniszczonych przez niebieską drużynę, inhibitor to budynek chroniony przez wieże, a gdy zostanie zniszczony, pozwala super stworom na odrodzenie się po stronie drużyny, która go zniszczyła.
+
+-   `blueTeamTurretPlatesDestroyed` - całkowita liczba płyt wieżyczek zniszczonych przez niebieską drużynę, płyty wieżyczek to tarcze ochronne na wieżach, które generują złoto, gdy zostaną zniszczone i całkowicie odpadają po 14 minutach.
+
+-   `blueTeamFirstBlood` - 1 pierwsza krew drużyny niebieskiej, 0 pierwsza krew drużyny czerwonej; pierwsza krew generuje dodatkowe złoto za zabójstwo.
+
+-   `blueTeamMinionsKilled` - całkowita liczba stworów zabitych przez niebieską drużynę; stwory generują złoto i doświadczenie oraz są jednym z głównych źródeł dochodu w grze.
+
+-   `blueTeamJungleMinions` - całkowita liczba stworów w dżungli zabitych przez niebieską drużynę, również generują złoto, ale doświadczenie zdobywa tylko dżungler.
+
+-   `blueTeamTotalGold` - całkowite złoto zdobyte przez niebieską drużynę z różnych źródeł (budynki, zabójstwa, asysty, miniony,...)
+
+-   `blueTeamXp` - całkowite doświadczenie niebieskiej drużyny, skorelowane z całkowitą ilością spędzoną w alejach (minion nie musi zostać zabity przez bohatera, aby zdobyć doświadczenie) i całkowitą ilością zabitych bohaterów.
+
+-   `blueTeamTotalDamageToChamps` - całkowite obrażenia zadane przez niebieską drużynę wrogim bohaterom
+
+-   `blueWin` - 1 zwycięstwo niebieskiej drużyny, 0 zwycięstwo czerwonej drużyny
+
+<!-- -->
+
+-   `redTeamControlWardsPlaced` - totemy kontrolne/różowe umieszczone przez czerwoną drużynę (mogą mieć wartości odstające w oparciu o możliwość, że drużyna podda się i kupi wiele totemów na koniec i umieści je)
+
+-   `redTeamWardsPlaced` - wszystkie rodzaje totemów (kontrolne, strażniczy, ghost poro itp.) umieszczone przez czerwoną drużynę
+
+-   `redTeamTotalKills` - całkowita liczba zabójstw dokonanych przez czerwoną drużynę, zabicie wrogiego bohatera generuje złoto i doświadczenie.
+
+-   `redTeamDragonKills` - całkowita liczba smoków zabitych przez czerwoną drużynę, smoki to elitarne potwory, które po zabiciu dają określone stałe wzmocnienia, a zabicie czwartego smoka daje drużynie smoczą duszę
+
+-   `redTeamHeraldKills` - całkowita liczba zabitych heraldów przez czerwoną drużynę, herald jest elitarnym potworem, który pomaga w niszczeniu budynków wroga (wieżyczek, inhibitorów i nexusa) oraz przepychaniu linii.
+
+-   `redTeamTowersDestroyed` - łączna liczba wież zniszczonych przez czerwoną drużynę, wieże to struktury obronne na alei, które atakują stwory i bohaterów.
+
+-   `redTeamInhibitorsDestroyed` - całkowita liczba inhibitorów zniszczonych przez czerwoną drużynę, inhibitor to budynek chroniony przez wieże, a gdy zostanie zniszczony, pozwala super stworom na odrodzenie się po stronie drużyny, która go zniszczyła.
+
+-   `redTeamTurretPlatesDestroyed` - całkowita liczba płyt wieżyczek zniszczonych przez czerwoną drużynę, płyty wieżyczek to tarcze ochronne na wieżach, które generują złoto, gdy zostaną zniszczone i całkowicie odpadają po 14 minutach.
+
+-   `redTeamMinionsKilled` - całkowita liczba stworów zabitych przez czerwoną drużynę; stwory generują złoto i doświadczenie oraz są jednym z głównych źródeł dochodu w grze.
+
+-   `redTeamJungleMinions` - całkowita liczba stworów w dżungli zabitych przez czerwoną drużynę, również generują złoto, ale doświadczenie zdobywa tylko dżungler.
+
+-   `redTeamTotalGold` - całkowite złoto zdobyte przez czerwoną drużynę z różnych źródeł (budynki, zabójstwa, asysty, miniony,...)
+
+-   `redTeamXp` - całkowite doświadczenie czerwonej drużyny, skorelowane z całkowitą ilością spędzoną w alejach (minion nie musi zostać zabity przez bohatera, aby zdobyć doświadczenie) i całkowitą ilością zabitych bohaterów.
+
+-   `redTeamTotalDamageToChamps` - całkowite obrażenia zadane przez czerwoną drużynę wrogim bohaterom
+
+Wszystkie zmienne są numeryczne z wyjątkiem `blueWin` oraz `blueTeamFirstBlood`.
+
+```{r}
+#| warning: false
+#| echo: false
+setwd("C:\\Users\\pawel\\Desktop\\Projekt_Eksploracja_Danych")
+library(knitr)
+library(rio)
+library(tidymodels)
+library(caret)
+library(randomForest)
+library(glmnet)
+library(GGally)
+library(Boruta)
+library(rpart)
+library(xgboost)
+library(foreach)
+library(ggplot2)
+library(doParallel)
+set.seed(1305)
+```
+
+```{r}
+mecze_at_15 <- import("C:\\Users\\pawel\\Desktop\\Projekt_Eksploracja_Danych\\match_data_v5.csv")
+knitr::kable(str(mecze_at_15))
+```
+
+## Czyszczenie danych
+
+### Usunięcie kolumny `matchId`
+
+Jest to kolumna indeksująca mecze, która nie zawiera żadnych informacji.
+
+```{r}
+mecze_at_15 <- mecze_at_15 %>% select(-matchId)
+```
+
+### Zamienienie cech jakościowych na faktory
+
+```{r}
+mecze_at_15$blueTeamFirstBlood <- factor(mecze_at_15$blueTeamFirstBlood, levels = c(1,0))
+mecze_at_15$blueWin <- factor(mecze_at_15$blueWin, levels = c(1,0))
+```
+
+### Sprawdzenie braku danych
+
+```{r}
+sum(colSums(is.na(mecze_at_15)))
+
+```
+
+W zbiorze nie ma braku danych.
+
+### Sprawdzenie balansu klas
+
+```{r}
+d <- table(mecze_at_15$blueWin)
+W1 <- round(d[1]/(d[1]+d[2]),3)*100
+W2 <- round(d[2]/(d[1]+d[2]),3)*100
+```
+
+W tym zbiorze jest `r W1`% obserwacji wskazujących na zwycięstwo drużyny niebieskiej, `r W2`% obserwacji wskazujących na zwycięstwo drużyny czerwonej zatem ten zbiór jest zbalansowany.
+
+## Selekcja cech
+
+Przeprowadziłem selekcję cech dwoma metodami **Random Forest Feature Importance** i **Metodą Boruta**.
+
+### Random Forest Feature Importance
+
+Random Forest Feature Importance jest techniką służącą do oceny ważności (istotności) zmiennych w modelu lasu losowego. Polega ona na określeniu, w jakim stopniu każda zmienna przyczynia się do przewidywania zmiennej celu. Istnieją dwie główne metody oceny ważności cech w modelach lasów losowych:
+
+##### Mean Decrease in Impurity (MDI)
+
+MDI mierzy ważność zmiennych na podstawie zmniejszenia nieczystości indeksu Giniego przez każdą zmienną w drzewach decyzyjnych. Kiedy zmienna jest używana do podziału węzła, jej ważność jest zwiększana proporcjonalnie do zmniejszenia nieczystości. Średnie zmniejszenie nieczystości w całym lesie jest używane jako miara ważności zmiennej.
+
+##### Mean Decrease in Accuracy (MDA)
+
+MDA mierzy ważność zmiennych poprzez permutację wartości zmiennych w zbiorze danych i mierzenie, jak permutacja wpływa na dokładność modelu. Jeśli permutacja wartości danej zmiennej powoduje znaczne zmniejszenie dokładności modelu, zmienna ta jest uważana za ważną.
+
+```{r}
+#| echo: false
+#| enabled: false
+
+#rf_model <- randomForest(blueWin ~ ., data = mecze_at_15, importance = TRUE)
+rf_model <- readRDS(file = "rf_model.RDS" )
+#varImpPlot(rf_model)
+```
+
+![Ocena istotności zmiennych modelu RF Feature Importance](Rplot.png){fig-align="center"}
+
+```{r}
+importance <- importance(rf_model)
+importance_s <- mean(importance[, 1:2])
+important_features_rf <- rownames(importance)[importance[, 1] > mean(importance[, 1:2])]
+data_reduced_rf <- mecze_at_15 %>% select(all_of(important_features_rf), blueWin)
+```
+
+Wyodrębniłamy istotność cech, jako próg (treshold) ustanowiłem średnią z wartości istotności - `r round(importance_s, 2)`. Oto cechy które zostały wyselekcjonowane.
+
+```{r}
+#| echo: false
+knitr::kable(str(data_reduced_rf))
+```
+
+### Metoda Boruta
+
+Metoda Boruta jest oparta na algorytmie lasu losowego, jednakże w przeciwieństwie do tradycyjnych metod selekcji cech, wykorzystuje losowe permutacje i porównania do identyfikacji istotnych cech. Dla każdej oryginalnej cech tworzona jest jej sklonowana wersja (shadow feature), która następnie jest losowa permutowana. Dalej jest przeprowadzane uczenie lasu losowego na zbiorze z danymi oryginalnymi i shadow features i liczona jest ważność cech. Istotność każdej cechy oryginalnej jest porównywana do najwyższej istotności cechy shadow, cechy które mają istotność wyższą klasyfikowane są za istotne, natomiast mniejszą za nieistotne. Klasyfikacja jest przeprowadzana iteracyjnie, aż wszystkie cechy zostaną zakwalifikowane jako istotne, nieistotne, niepewne, lub do osiągnięcia limitu iteracji.
+
+```{r}
+#| echo: false
+#boruta_model <- Boruta(blueWin ~ ., data = mecze_at_15, doTrace = 1, maxRuns = 50)
+boruta_model <- readRDS("boruta_model.RDS")
+#plot(boruta_model, cex.axis = 0.7, las = 2, xlab = "", main = "Wyniki Boruta")
+```
+
+![Ocena istotności zmiennych modelu Metoda Boruta](Rplot02.png)
+
+Cechy oznaczone zielonym kolorem według Metody Boruta istotne, żółtym niepewne, czerwonym nieistotne, natomiast niebieski kolor to shadow features.
+
+```{r}
+selected_features_boruta <- getSelectedAttributes(boruta_model, withTentative = TRUE)
+data_reduced_boruta <- mecze_at_15 %>% select(all_of(selected_features_boruta), blueWin)
+
+```
+
+Wyodrębniamy wybrane cech i otrzymujemy zbiór z 23 zmiennymi (pamiętamy o dodaniu cechy `blueWin`).
+
+```{r}
+knitr::kable(str(data_reduced_boruta))
+```
+
+## Podział danych
+
+Dzielimy zbiory danych z przeprowadzoną selekcją cech i zbiór pełny na treningowy i testowy z proporcją 80/20.
+
+```{r}
+part_boruta <-  createDataPartition(y = data_reduced_boruta$blueWin, p = 0.8, list = F)
+part_rf <-  createDataPartition(y = data_reduced_rf$blueWin, p = 0.8, list = F)
+part_all<-  createDataPartition(y = mecze_at_15$blueWin, p = 0.8, list = F)
+
+train_boruta <- data_reduced_boruta[part_boruta,]
+test_boruta <- data_reduced_boruta[-part_boruta,]
+
+train_rf <- data_reduced_rf[part_rf,]
+test_rf <- data_reduced_rf[-part_rf,]
+
+train_all <- mecze_at_15[part_all,]
+test_all <- mecze_at_15[-part_all,]
+```
+
+## GLMNET
+
+GLMNET (Generalized Linear Model NETwork) popularna biblioteka w R wykorzystywana do regularyzacji modeli liniowych w naszym przypadku regresji logistycznej. Ma 3 tryby regularyzacji:
+
+-   L2 Regularization - dodaje się karę do funkcji celu równą kwadratowi wielkości współczynników modelu:
+
+    $$
+    \text{RSS} + \lambda \sum_{j=1}^p \beta_j^2
+    $$
+
+-   L1 Regularization - dodaje się karę do funkcji celu równą bezwzględnym wartościom współczynników modelu:
+
+    $$
+    \text{RSS} + \lambda \sum_{j=1}^p | \beta_j |
+    $$
+
+-   Elastic Net - dodaje zarówno karę L1 oraz L2.
+
+    $$
+    \text{RSS} + \lambda_1 \sum_{j=1}^p | \beta_j | + \lambda_2 \sum_{j=1}^p \beta_j^2
+    $$
+
+    gdzie $\lambda$, $\lambda_1​$ i $\lambda_2$ ​ to parametry regularyzacyjne, a $\beta_j$ ​ to współczynniki regresji, RSS to suma kwadratów różnic między wartościami rzeczywistymi, a przewidywanymi przez model.
+
+```{r}
+control_GLMNET2 <- trainControl(method = "repeatedcv",
+                           number = 10,
+                           repeats = 5,
+                          savePredictions = "final")
+
+gridGLMNET <- expand.grid(alpha = seq(0, 1, by = 0.1),lambda = c(0.0001,0.001, 0.01, 0.1))
+```
+
+Definiujemy kontrolę treningu, czyli walidację krzyżową (10) z powtórzeniem (5) oraz siatkę wartości parametrów `alpha` i `lambda`. `alpha` odpowiada za typ regularyzacji: 0 - L2, 1 - L1, a pomiędzy to Elastic Net. Natomiast `lambda` odpowiada za siłę regularyzacji.
+
+```{r}
+#| code-fold: show
+# Model_GLMNET_boruta3 <- train(blueWin~., 
+#                     train_boruta,method = "glmnet", 
+#                     trControl = control_GLMNET2,
+#                     tuneGrid = gridGLMNET,
+#                     family = "binomial")
+# saveRDS(Model_GLMNET_boruta3, "Model_GLMNET_boruta3.RDS")
+Model_GLMNET_boruta3 <- readRDS("Model_GLMNET_boruta3.RDS") 
+pred_GLMNET_boruta3_train <-  predict(Model_GLMNET_boruta3, newdata = train_boruta, type = "raw") 
+cM_GLMNET_boruta3_train <- confusionMatrix(pred_GLMNET_boruta3_train, train_boruta$blueWin) 
+pred_GLMNET_boruta3_test <-  predict(Model_GLMNET_boruta3, newdata = test_boruta) 
+cM_GLMNET_boruta3_test <- confusionMatrix(pred_GLMNET_boruta3_test, test_boruta$blueWin)
+```
+
+Największą dokładność ma model z parametrami:
+
+```{r}
+#| echo: false
+Model_GLMNET_boruta3$bestTune
+```
+
+```{r}
+#| echo: false
+knitr::kable(data.frame("GLMNET_boruta3_train" = cM_GLMNET_boruta3_train$overall[1],"GLMNET_boruta3_test" = cM_GLMNET_boruta3_test$overall[1]))
+```
+
+```{r}
+#| code-fold: show
+# Model_GLMNET_rf <- train(blueWin~.,
+#                     train_rf,method = "glmnet",
+#                     trControl = control_GLMNET2,
+#                     tuneGrid = gridGLMNET,
+#                     family = "binomial")
+# saveRDS(Model_GLMNET_rf, "Model_GLMNET_rf.RDS")
+Model_GLMNET_rf <- readRDS("Model_GLMNET_rf.RDS") 
+
+pred_GLMNET_rf_train <-  predict(Model_GLMNET_rf, newdata = train_rf, type = "raw")
+cM_GLMNET_rf_train <- confusionMatrix(pred_GLMNET_rf_train, train_rf$blueWin)
+
+pred_GLMNET_rf_test <-  predict(Model_GLMNET_rf, newdata = test_rf) 
+cM_GLMNET_rf_test <- confusionMatrix(pred_GLMNET_rf_test, test_rf$blueWin)
+```
+
+Największą dokładność ma model z parametrami:
+
+```{r}
+#| echo: false
+Model_GLMNET_rf$bestTune
+```
+
+```{r}
+#| echo: false
+knitr::kable(data.frame("GLMNET_rf_train" = cM_GLMNET_rf_train$overall[1],"GLMNET_rf_test" = cM_GLMNET_rf_test$overall[1]))
+```
+
+```{r}
+#| code-fold: show
+# Model_GLMNET_all <- train(blueWin~.,
+#                     train_all ,method = "glmnet",
+#                     trControl = control_GLMNET2,
+#                     tuneGrid = gridGLMNET,
+#                     family = "binomial")
+# saveRDS(Model_GLMNET_all, "Model_GLMNET_all.RDS")
+Model_GLMNET_all <- readRDS("Model_GLMNET_all.RDS")
+
+pred_GLMNET_all_train <-  predict(Model_GLMNET_all, newdata = train_all, type = "raw")
+cM_GLMNET_all_train <- confusionMatrix(pred_GLMNET_all_train, train_all$blueWin)
+
+pred_GLMNET_all_test <-  predict(Model_GLMNET_all, newdata = test_all)
+cM_GLMNET_all_test <- confusionMatrix(pred_GLMNET_all_test, test_all$blueWin)
+```
+
+Największą dokładność ma model z parametrami:
+
+```{r}
+#| echo: false
+Model_GLMNET_all$bestTune
+```
+
+```{r}
+#| echo: false
+knitr::kable(data.frame("GLMNET_all_train" = cM_GLMNET_all_train$overall[1],"GLMNET_all_test" = cM_GLMNET_all_test$overall[1]))
+```
+
+```{r}
+glm <- data.frame("GLMNET_boruta3_test" = cM_GLMNET_boruta3_test$overall[1],"GLMNET_rf_test" = cM_GLMNET_rf_test$overall[1],"GLMNET_all_test" = cM_GLMNET_all_test$overall[1])
+knitr::kable(round(glm, 4))
+```
+
+Z racji tego że wszystkie model z wszystkimi zmiennymi i model z 23 zmiennymi mają zbliżoną wartość `Accuracy` na poziomie 76% w kolejnych modelach będę używał zbioru utworzonego za pomocą Random Forest Feature Importance, z uwagi na czas uczenia modeli.
+
+## Metoda k-Najbliższych Sąsiadów (kknn)
+
+Podstawowa idea metody kknn polega na przewidzeniu klasy lub wartości zmiennej docelowej dla nowego punktu danych na podstawie etykiet lub wartości jego najbliższych sąsiadów w przestrzeni cech.
+
+**Znalezienie najbliższych sąsiadów**: Dla nowego punktu danych obliczana jest odległość od wszystkich punktów w zestawie danych treningowych. Następnie wybierane jest "k" punktów o najmniejszej odległości.
+
+**Przewidywanie klasy lub wartości**: Dla klasyfikacji, klasy sąsiadów są używane do przewidzenia klasy nowego punktu danych, na przykład poprzez większościowy głos sąsiadów. Dla regresji, wartości zmiennej docelowej są średnią lub medianą wartości sąsiadów.
+
+```{r}
+control_KNN <- trainControl(method = "cv",
+                            number = 10,
+                            savePredictions = "final")
+
+gridKNN <- expand.grid(kmax = seq(2, 10, by = 1),
+                       distance = c(1, 2),
+                       kernel = c("rectangular", "triangular"))
+```
+
+Definiujemy kontrolę treningu, czyli walidację krzyżową (10) oraz siatkę wartości parametrów `kmax`, `distance` i `kernel`.
+
+`kmax`: Maksymalna liczba sąsiadów, która będzie brana pod uwagę przy klasyfikacji.
+
+`distance`: Metryka odległości, która będzie używana do pomiaru odległości między punktami danych. Wartości to 1 dla odległości Manhattan i 2 dla odległości Euklidesowej.
+
+`kernel`: Rodzaj funkcji jądra, której wagi są używane do przewidywania wartości zmiennej docelowej w oparciu o wartości sąsiadów; `rectangular` - prostokątna i `triangular` - trójkątna.
+
+```{r}
+#| code-fold: show
+# model_knn2 <- train(blueWin ~ .,
+#                     data = train_rf,
+#                     method = "kknn",
+#                     tuneGrid =gridKNN,
+#                     trControl = control_KNN )
+# 
+# saveRDS(model_knn2, file = "model_knn2.RDS")
+
+model_knn2 <- readRDS( file = "model_knn2.RDS")
+
+pred_knn_rf_train2 <- predict(model_knn2, newdata = train_rf)
+cM_knn_rf_train2 <- confusionMatrix(pred_knn_rf_train2, train_rf$blueWin)
+
+pred_knn_rf_test2 <-  predict(model_knn2, newdata = test_rf)
+cM_knn_rf_test2 <- confusionMatrix(pred_knn_rf_test2, test_rf$blueWin)
+
+```
+
+Największą dokładność ma model z parametrami:
+
+```{r}
+#| echo: false
+model_knn2$bestTune
+```
+
+```{r}
+#| echo: false
+knitr::kable(data.frame("knn_rf_train" = cM_knn_rf_train2$overall[1],"knn_rf_test" = cM_knn_rf_test2$overall[1]))
+```
+
+Model `model_knn2` na wartość `Accuracy` na poziomie 77%.
+
+## RDA
+
+RDA działa poprzez minimalizowanie funkcji straty, która zawiera składnik kary za złożoność modelu (poprzez regularyzację) oraz składnik dopasowania do danych. Poprzez kontrolowanie wartości parametru regularyzacji, możemy regulować elastyczność modelu, co pozwala na uniknięcie nadmiernego dopasowania (przeuczenia) nawet w przypadku małej liczby próbek treningowych lub dużej liczby predyktorów. RDA próbuje znaleźć hiperpłaszczyznę w przestrzeni predyktorów, która najlepiej separuje różne klasy.
+
+```{r}
+control_RDA <- trainControl(method = "cv",
+                           number = 10,
+                          savePredictions = "final")
+
+gridRDA <- expand.grid(gamma = seq(0,1, by = 0.1),
+                     lambda = seq(0,1, by = 0.1))
+```
+
+Definiujemy kontrolę treningu, czyli walidację krzyżową (10) oraz siatkę wartości parametrów `gamma` i `lambda`.
+
+`gamma`: Parametr kontrolujący elastyczność modelu RDA. Im wyższa wartość, tym bardziej elastyczny model.
+
+`lambda`: Parametr regularyzacji, który kontroluje złożoność modelu. Im wyższa wartość, tym większa regularyzacja, co może prowadzić do prostszych modeli, które są mniej podatne na przeuczenie.
+
+```{r}
+#| code-fold: show
+# Model_RDA_rf <- train(blueWin~., 
+#                     train_rf,method = "rda", 
+#                     trControl = control_RDA,
+#                     tuneGrid = gridRDA)
+# saveRDS(Model_RDA_rf, file = "Model_RDA_rf.RDS")
+Model_RDA_rf <- readRDS(file = "Model_RDA_rf.RDS")
+
+pred_train_RDA_rf <- predict(Model_RDA_rf, newdata = train_rf)
+cM_train_RDA_rf <- confusionMatrix(pred_train_RDA_rf,train_rf$blueWin)
+
+pred_test_RDA_rf <- predict(Model_RDA_rf, newdata = test_rf)
+cM_test_RDA_rf <- confusionMatrix(pred_test_RDA_rf,test_rf$blueWin)
+```
+
+Największą dokładność ma model z parametrami:
+
+```{r}
+#| echo: false
+Model_RDA_rf$bestTune
+```
+
+```{r}
+#| echo: false
+knitr::kable(data.frame("train_RDA_rf" = cM_train_RDA_rf$overall[1],"test_RDA_rf" = cM_test_RDA_rf$overall[1]))
+```
+
+Model `Model_RDA_rf` na wartość `Accuracy` na poziomie 76%.
+
+## Las Losowy
+
+```{r}
+control_RF <- trainControl(method = "cv",
+                           number = 10,
+                          savePredictions = "final")
+grid_RF <- expand.grid(mtry = seq(1,11, by=1),
+                       splitrule = c("gini", "extratrees"),
+                       min.node.size = seq(1,30, by = 5))
+```
+
+Definiujemy kontrolę treningu, czyli walidację krzyżową (10) oraz siatkę wartości parametrów `mtry`, `splitrule` i `min.node.size`.
+
+`mtry`: Określa liczbę zmiennych losowo wybranych do podziału na każdym węźle drzewa.
+
+`splitrule`: Określa regułę podziału węzłów drzewa. Może przyjąć jedną z dwóch wartości: "gini" lub "extratrees". "Gini" oznacza używanie indeksu Giniego do oceny jakości podziału, podczas gdy "extratrees" oznacza użycie losowych podziałów.
+
+`min.node.size`: Minimalna liczba obserwacji wymagana do utworzenia węzła końcowego (liścia) drzewa. Parametr ten reguluje złożoność modelu i może pomóc w zapobieganiu nadmiernemu dopasowaniu.
+
+```{r}
+#| code-fold: show
+# Model_RF_rf1 <- train(blueWin~.,
+#                     train_rf, method = "ranger",
+#                     trControl = control_GLMNET2,
+#                     tuneGrid = expand.grid(mtry = seq(1,11, by=1),
+#                                            splitrule = c("gini", "extratrees"),
+#                                           min.node.size = seq(1,30, by = 5)))
+# saveRDS(Model_RF_rf1, file = "Model_RF_rf1.RDS") 
+Model_RF_rf1 <- readRDS(file = "Model_RF_rf1.RDS") 
+
+pred_train_RF_rf1 <- predict(Model_RF_rf1, newdata = train_rf)
+cM_train_RF_rf1 <- confusionMatrix(pred_train_RF_rf1,train_rf$blueWin)
+
+pred_test_RF_rf1 <- predict(Model_RF_rf1, newdata = test_rf)
+cM_test_RF_rf1 <- confusionMatrix(pred_test_RF_rf1,test_rf$blueWin)
+```
+
+Największą dokładność ma model z parametrami:
+
+```{r}
+#| echo: false
+Model_RF_rf1$bestTune
+```
+
+```{r}
+#| echo: false
+knitr::kable(data.frame("train_RF_rf1" = cM_train_RF_rf1$overall[1],"test_RF_rf1" = cM_test_RF_rf1$overall[1]))
+```
+
+Model `Model_RF_rf1` na wartość `Accuracy` na poziomie 82%.
+
+## SVM
+
+```{r}
+train_ctrl <- trainControl(
+  method = "cv",
+  number = 10,
+  savePredictions = "final")
+grid <- expand.grid(
+  C= c(0.1,10),
+  scale = c(0.1,1),
+  degree = c(2))
+```
+
+Definiujemy kontrolę treningu, czyli walidację krzyżową (10) oraz siatkę wartości parametrów `C`, `scale` i `degree`.
+
+`C`: Parametr regularyzacji. Kontroluje wagę kar, jakie są nakładane na błąd dopasowania.
+
+`scale`: Szerokość jądra Gaussowskiego. Określa, jak szeroko kernel Gaussowski rozciąga się wokół każdego punktu danych. Wyższe wartości oznaczają szersze rozproszenie.
+
+`degree`: Stopień wielomianu w jądrze wielomianowym. Parametr ten jest stosowany tylko wtedy, gdy jądro jest wielomianowe.
+
+```{r}
+#| code-fold: show
+# svm_m <- train(blueWin~., data = train_rf, 
+#              method = "svmPoly", 
+#              trControl = train_ctrl, 
+#              tuneGrid = grid) 
+#  
+# saveRDS(svm_m, file = "svm_m.RDS") 
+svm_m <-  readRDS(, file = "svm_m.RDS") 
+pred_svm_Poly <- predict(svm_m, newdata = train_rf)
+cM_svm_Poly <- confusionMatrix(train_rf$blueWin, pred_svm_Poly)
+
+pred_svm_Poly_t <- predict(svm_m, newdata = test_rf)
+cM_svm_Poly_t <- confusionMatrix(test_rf$blueWin, pred_svm_Poly_t)
+```
+
+Największą dokładność ma model z parametrami:
+
+```{r}
+#| echo: false
+svm_m$bestTune
+```
+
+```{r}
+#| echo: false
+knitr::kable(data.frame("svm_Poly" = cM_svm_Poly$overall[1],"svm_Poly_t" = cM_svm_Poly_t$overall[1]))
+```
+
+Model `svm_m` na wartość `Accuracy` na poziomie 76%.
+
+## Wnioski
+
+Zbiór danych jest zbalansowany pod względem klasy docelowej, z 49.5% przypadków wskazujących na zwycięstwo niebieskiej drużyny i 50.5% przypadków wskazujących na zwycięstwo czerwonej drużyny. Balans klas jest korzystny dla modelowania, ponieważ zapobiega problemom związanym z niezrównoważonymi danymi.
+
+Do selekcji cech zastosowano dwie metody: Random Forest Feature Importance oraz Metodę Boruta.
+
+-   **Random Forest Feature Importance**:
+
+    -   Zidentyfikowano 12 najważniejszych cech.
+
+-   **Metoda Boruta**:
+
+    -   Zidentyfikowano 23 najważniejszych cechy.
+
+Mimo tego że w Metoda Boruta miała więcej najważniejszych cech dokładność była podobna w modelu zbudowanym za pomocą GLMNET, dlatego dla reszty modeli użyto zbioru danych z selekcją cech Random Forest Importance.
+
+```{r}
+knitr::kable(round(data.frame("GLMNET_boruta3" = cM_GLMNET_boruta3_test$overall[1],
+                        "GLMNET_rf" = cM_GLMNET_rf_test$overall[1],
+                        "GLMNET_all" = cM_GLMNET_all_test$overall[1],
+                        "knn_rf" = cM_knn_rf_test2$overall[1],
+                        "test_RDA_rf" = cM_test_RDA_rf$overall[1],
+                        "test_RF_rf" = cM_test_RF_rf1$overall[1],
+                        "svm_Poly_rf" = cM_svm_Poly_t$overall[1]
+                        ),3))
+```
+
+Z pozostałych modeli najlepszym okazał sie model Random Forest z dokładnością 82% na drugim miejscu model KKN z dokładnością 77% przewidywania zwycięzcy w meczu Lola.
